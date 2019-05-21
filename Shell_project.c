@@ -67,7 +67,7 @@ int main(void)
 
         // (1)
         pid_fork = fork();
-        printf("pid_fork: %i\n", pid_fork);
+
         new_process_group(pid_fork);
 
         job* new_job_created = new_job(pid_fork, args[0], background);
