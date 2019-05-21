@@ -43,7 +43,6 @@ int main(void)
         fflush(stdout);
         get_command(inputBuffer, MAX_LINE, args, &background);  /* get next command */
 
-
         if(args[0]==NULL) continue;   // if empty command
 
         /* the steps are:
@@ -71,8 +70,11 @@ int main(void)
         printf("pid_fork: %i\n", pid_fork);
         new_process_group(pid_fork);
 
+        job* new_job_created = new_job(pid_fork, args[0], background);
+
+        add_job(jobs, new_job_created);
+
         int isChild = pid_fork == 0;
-        job* newjob;
 
 		if (isChild) {
 
@@ -90,18 +92,20 @@ int main(void)
 		} else { // Parent
 		    // pid_fork == child pid
 
-            add_job(jobs, new_job(pid_fork, args[0], background));
 		    if (!background) {
                 pid_wait = waitpid(pid_fork, &status, WUNTRACED); // pid_wait devuelve el pid del hijo
                 set_terminal(getpid());
                 status_res = analyze_status(status, &info);
                 fflush(stdout);
-                printf("%s pid: %i, command: %s, %s, info: %i\n",
-                       state_strings[background],
-                       pid_fork,
-                       args[0],
-                       status_strings[status_res],
-                       info);
+                if (!info) {
+                    delete_job(jobs, new_job_created);
+                    printf("%s pid: %i, command: %s, %s, info: %i\n",
+                           state_strings[background],
+                           pid_fork,
+                           args[0],
+                           status_strings[status_res],
+                           info);
+                }
             } else {
                 printf("%s job running... pid: %i, command: %s\n", state_strings[background], pid_fork, args[0]);
 		    }
