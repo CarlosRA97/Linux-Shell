@@ -16,201 +16,212 @@ To compile and run the program:
 
 #include "job_control.h"   // remember to compile with module job_control.c
 #include <string.h>
-#include <stdbool.h>
-#include <pthread.h>
-#include <sys/mman.h>
-#include <assert.h>
 
 #define MAX_LINE 256 /* 256 chars per line, per command, should be enough. */
 
 // -----------------------------------------------------------------------
 //                            MAIN          
 // -----------------------------------------------------------------------
-job * global_jobs;
+job *global_jobs;
 
-typedef struct
-{
-    bool done;
-    pthread_mutex_t mutex;
-} shared_data;
-
-static shared_data* data = NULL;
-
-void initialise_shared()
-{
-    // place our shared data in shared memory
-    int prot = PROT_READ | PROT_WRITE;
-    int flags = MAP_SHARED | MAP_ANONYMOUS;
-    data = mmap(NULL, sizeof(shared_data), prot, flags, -1, 0);
-    assert(data);
-
-    data->done = false;
-
-    // initialise mutex so it works properly in shared memory
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
-    pthread_mutex_init(&data->mutex, &attr);
+void print_info(int state, pid_t pid, char *command, enum status status_res, int info) {
+    printf("%s pid: %i, command: %s, %s, info: %i\n",
+           state_strings[state],
+           pid,
+           command,
+           status_strings[status_res],
+           info);
 }
 
-int waiting_pid;
-
-void manejador_SIGCHILD() {
+void handler_SIGCHLD() {
     int status;
     int info;
-    printf("\n\nwaiting_pid: %i\n", waiting_pid);
-    int pid_wait = waitpid(waiting_pid, &status, WNOHANG | WUNTRACED | WCONTINUED);
-    if (pid_wait == waiting_pid) {
-        int status_res = analyze_status(status, &info);
-        if (status_res == EXITED) {
-            printf("El hijo termino correctamente");
-            set_terminal(getpid());
-        } else {
-            printf("status res: %s, pid_wait: %i\n", status_strings[status_res], pid_wait);
+    job *tarea;
+
+//    block_SIGCHLD();
+    for (int i = 1; i <= list_size(global_jobs); ++i) {
+        tarea = get_item_bypos(global_jobs, i);
+        int pid_wait = waitpid(tarea->pgid, &status, WNOHANG | WUNTRACED | WCONTINUED);
+
+        if (pid_wait > 0) {
+
+            int status_res = analyze_status(status, &info);
+
+            if (status_res == EXITED || (status_res == SIGNALED && (info == SIGKILL || info == SIGTERM))) {
+                delete_job(global_jobs, tarea);
+                i--;
+            } else if (status_res == SUSPENDED || (status_res == SIGNALED && info == SIGSTOP)) {
+                tarea->state = STOPPED;
+            } else if (status_res == CONTINUED) {
+                tarea->state = BACKGROUND;
+            }
+
+            print_info(tarea->state, tarea->pgid, tarea->command, status_res, info);
         }
     }
-
-//    if (!empty_list(jobs)) {
-//        for (int i = 0; i < list_size(jobs); ++i) {
-//            job *tarea = get_item_bypos(jobs, i);
-//            printf("%s\n", state_strings[tarea->state]);
-//            if (tarea->state == EXITED) {
-//                delete_job(jobs, tarea);
-//            }
-//        }
-//    }
+//    unblock_SIGCHLD();
 }
 
-int get_pos(char* arg) {
-    return arg == NULL ? 1 : atoi(arg);
+int get_pos(char *arg) {
+    int pos = 0;
+    if (arg == NULL) {
+        if (empty_list(global_jobs)) {
+            fprintf(stderr, "No hay tareas\n");
+        } else {
+            pos = list_size(global_jobs);
+        }
+    } else if (atoi(arg) > list_size(global_jobs)) {
+        fprintf(stderr, "Tarea no encontrada\n");
+    } else {
+        pos = atoi(arg);
+    }
+    return pos;
 }
 
-void fg(char * arg) {
+void fg(char *arg) {
+//    block_SIGCHLD();
     int pos = get_pos(arg);
+    if (pos) {
 
-    job *tarea = get_item_bypos(global_jobs, pos);
-    if (tarea != NULL) {
+        job *tarea_copy = get_item_bypos(global_jobs, pos);
+        job *tarea = new_job(tarea_copy->pgid, tarea_copy->command, tarea_copy->state);
+        delete_job(global_jobs, tarea_copy);
+
+        set_terminal(tarea->pgid);
+
+        if (tarea->state == STOPPED) {
+            killpg(tarea->pgid, SIGCONT);
+        }
         tarea->state = FOREGROUND;
 
-        int status;
-        int pid_child = tarea->pgid;
-        int pid_wait = waitpid(pid_child, &status, WCONTINUED);
-        if (pid_wait == pid_child) {
-            set_terminal(pid_child);
+        int status, info, status_res;
+
+        int pid_wait = waitpid(tarea->pgid, &status, WUNTRACED);
+        printf("pid_wait_sigchld: %i\n", pid_wait);
+        set_terminal(getpid());
+
+        status_res = analyze_status(status, &info);
+
+        if (status_res == SUSPENDED) {
+            tarea->state = STOPPED;
+            printf("Suspended pid: %i, command %s\n", tarea->pgid, tarea->command);
+            add_job(global_jobs, tarea);
+        } else {
+            print_info(tarea->state, tarea->pgid, tarea->command, status_res, info);
         }
+
     }
+//    unblock_SIGCHLD();
 }
 
-void bg(char * arg) {
+void bg(char *arg) {
+//    block_SIGCHLD();
     int pos = get_pos(arg);
+    if (pos) {
 
-    job *tarea = get_item_bypos(global_jobs, pos);
-    if (tarea != NULL) {
+        job *tarea = get_item_bypos(global_jobs, pos);
+
         tarea->state = BACKGROUND;
-//
-//        int status;
-//        int pid_child = tarea->pgid;
-//        int pid_wait = waitpid(pid_child, &status, WCONTINUED);
-//        if (pid_wait == pid_child) {
-//            set_terminal(pid_child);
-//        }
+        killpg(tarea->pgid, SIGCONT);
+
+    }
+//    unblock_SIGCHLD();
+}
+
+void cd(char *arg) {
+    int exitCode = chdir(arg);
+    if (arg != NULL && exitCode == -1) {
+        fprintf(stderr, "No se puede cambiar al directorio %s\n", arg);
+        fflush(stdout);
     }
 }
 
-void run_parent(pid_t pid_fork, char* args[], int background) {
+void run_parent(pid_t pid_fork, char *args[], int background) {
     int pid_wait; /* pid for created and waited process */
     int status;             /* status returned by wait */
     enum status status_res; /* status processed by analyze_status() */
-    int info;				/* info processed by analyze_status() */
-
-    waiting_pid = pid_fork;
-
-    job* new_job_created = new_job(pid_fork, args[0], background);
+    int info;                /* info processed by analyze_status() */
 
     new_process_group(pid_fork);
-    add_job(global_jobs, new_job_created);
 
     if (!background) {
 
         /* FUNCIONAMIENTO PRINCIPAL */
-        set_terminal(pid_fork); // le da el terminal al hijo
-        pid_wait = waitpid(pid_fork, &status, WUNTRACED); // espera por el hijo, pid_wait devuelve el pid del hijo
-        set_terminal(getpid()); // le da el terminal al padre
+        set_terminal(pid_fork);                             // le da el terminal al hijo
+        pid_wait = waitpid(pid_fork, &status, WUNTRACED);   // espera por el hijo, pid_wait devuelve el pid del hijo
+        set_terminal(getpid());                             // le da el terminal al padre
         /* ------------------------ */
 
-        printf("pid_wait: %i, pid_fork %i son iguales %i\n", pid_wait, pid_fork, pid_wait == pid_fork);
-        if (pid_wait == pid_fork) {
-            status_res = analyze_status(status, &info);
+        status_res = analyze_status(status, &info);
 
-
-            if (status_res == EXITED) {
-                delete_job(global_jobs, new_job_created);
-            }
-
-            if (info != 255) {
-                printf("%s pid: %i, command: %s, %s, info: %i\n",
-                       state_strings[background],
-                       pid_fork,
-                       args[0],
-                       status_strings[status_res],
-                       info);
-            }
-
+        if (status_res == SUSPENDED) {
+            block_SIGCHLD();
+            add_job(global_jobs, new_job(pid_fork, args[0], STOPPED));
+            unblock_SIGCHLD();
+        } else if (info == 0xFF) {
+            fprintf(stderr, "Error, command not found: %s\n", args[0]);
+            fflush(stderr);
         }
 
+        print_info(background, pid_fork, args[0], status_res, info);
+
     } else {
-        signal(SIGCHLD, manejador_SIGCHILD);
         printf("%s job running... pid: %i, command: %s\n", state_strings[background], pid_fork, args[0]);
+        block_SIGCHLD();
+        add_job(global_jobs, new_job(pid_fork, args[0], background));
+        unblock_SIGCHLD();
     }
 }
 
-void run_child(char* args[]) {
+void run_child(char *args[]) {
     restore_terminal_signals();
     execvp(args[0], args);
-    fprintf(stderr, "Error, command not found: %s\n", args[0]);
     exit(-1);
 }
 
-int run_interal_commands(char* args[]) {
+int run_interal_commands(char *args[]) {
     int has_runned = 0;
     if (!strcmp(args[0], "cd")) {
-        chdir(args[1]);
+        cd(args[1]);
         has_runned = 1;
     } else if (!strcmp(args[0], "exit")) {
         exit(0);
     } else if (!strcmp(args[0], "jobs")) {
+        block_SIGCHLD();
         if (!empty_list(global_jobs)) {
             print_job_list(global_jobs);
         }
+        unblock_SIGCHLD();
         has_runned = 1;
-    } else if (!strcmp(args[0], "mfg")) {
+    } else if (!strcmp(args[0], "fg")) {
         fg(args[1]);
         has_runned = 1;
-    } else if (!strcmp(args[0], "mbg")) {
+    } else if (!strcmp(args[0], "bg")) {
         bg(args[1]);
         has_runned = 1;
     }
     return has_runned;
 }
 
-int main(void)
-{
-	char inputBuffer[MAX_LINE]; /* buffer to hold the command entered */
-	int background;             /* equals 1 if a command is followed by '&' */
-	char *args[MAX_LINE/2];     /* command line (of 256) has max of 128 arguments */
-	// probably useful variables:
+int main(void) {
+    char inputBuffer[MAX_LINE]; /* buffer to hold the command entered */
+    int background;             /* equals 1 if a command is followed by '&' */
+    char *args[MAX_LINE / 2];     /* command line (of 256) has max of 128 arguments */
 
-	global_jobs = new_list("jobs");
+    global_jobs = new_list("jobs");
+
+    signal(SIGCHLD, handler_SIGCHLD);
 
     ignore_terminal_signals();
 
+
     while (1)   /* Program terminates normally inside get_command() after ^D is typed*/
-	{
+    {
         printf("COMMAND->");
         fflush(stdout);
         get_command(inputBuffer, MAX_LINE, args, &background);  /* get next command */
 
-        if(args[0]==NULL) continue;   // if empty command
+        if (args[0] == NULL) continue;   // if empty command
 
         int has_runned_internal_command = run_interal_commands(args);
         if (has_runned_internal_command) {
@@ -220,20 +231,12 @@ int main(void)
         int pid_fork = fork();
 
         int isChild = pid_fork == 0;
-		if (isChild) {
+        if (isChild) {
             run_child(args);
-		} else { // Child
-		    run_parent(pid_fork, args, background);
-		}
-	} // end while
-
-    /* the steps are:
-         (1) fork a child process using fork()
-         (2) the child process will invoke execvp()
-         (3) if background == 0, the parent will wait, otherwise continue
-         (4) Shell shows a status message for processed command
-         (5) loop returns to get_commnad() function
-    */
+        } else { // Child
+            run_parent(pid_fork, args, background);
+        }
+    } // end while
 }
 
 // Tarea 3:
