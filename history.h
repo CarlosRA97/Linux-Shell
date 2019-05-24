@@ -1,6 +1,5 @@
-
-#ifndef SHELL_AMPLIACION_H
-#define SHELL_AMPLIACION_H
+#ifndef SHELL_HISTORY_H
+#define SHELL_HISTORY_H
 
 char getch();
 
