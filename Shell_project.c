@@ -14,8 +14,18 @@ To compile and run the program:
 
 **/
 
+#define ROJO "\x1b[31;1;1m"
+#define NEGRO "\x1b[0m"
+#define VERDE "\x1b[32;1;1m"
+#define AZUL "\x1b[34;1;1m"
+#define CIAN "\x1b[36;1;1m"
+#define MARRON "\x1b[33;1;1m"
+#define PURPURA "\x1b[35;1;1m"
+#define $ "\e[0m"
+
 #include "job_control.h"   // remember to compile with module job_control.c
 #include <string.h>
+#include "ampliacion.h"
 
 #define MAX_LINE 256 /* 256 chars per line, per command, should be enough. */
 
@@ -38,7 +48,7 @@ void handler_SIGCHLD() {
     int info;
     job *tarea;
 
-//    block_SIGCHLD();
+    block_SIGCHLD();
     for (int i = 1; i <= list_size(global_jobs); ++i) {
         tarea = get_item_bypos(global_jobs, i);
         int pid_wait = waitpid(tarea->pgid, &status, WNOHANG | WUNTRACED | WCONTINUED);
@@ -59,7 +69,7 @@ void handler_SIGCHLD() {
             print_info(tarea->state, tarea->pgid, tarea->command, status_res, info);
         }
     }
-//    unblock_SIGCHLD();
+    unblock_SIGCHLD();
 }
 
 int get_pos(char *arg) {
@@ -79,7 +89,7 @@ int get_pos(char *arg) {
 }
 
 void fg(char *arg) {
-//    block_SIGCHLD();
+    block_SIGCHLD();
     int pos = get_pos(arg);
     if (pos) {
 
@@ -111,11 +121,11 @@ void fg(char *arg) {
         }
 
     }
-//    unblock_SIGCHLD();
+    unblock_SIGCHLD();
 }
 
 void bg(char *arg) {
-//    block_SIGCHLD();
+    block_SIGCHLD();
     int pos = get_pos(arg);
     if (pos) {
 
@@ -125,7 +135,7 @@ void bg(char *arg) {
         killpg(tarea->pgid, SIGCONT);
 
     }
-//    unblock_SIGCHLD();
+    unblock_SIGCHLD();
 }
 
 void cd(char *arg) {
@@ -203,6 +213,49 @@ int run_interal_commands(char *args[]) {
     return has_runned;
 }
 
+void read_arrow_keys() {
+    /* Las teclas de cursor devuelven una secuencia de 3 caracteres,
+    27 -­­ 91 -­­ (65, 66, 67 ó 68) */
+
+    const char ESC = 0x1B;
+    const char LEFT_SQUARE_BRACKET = 0x5B;
+
+    char sec[3];
+    sec[0] = getch();
+    switch (sec[0])
+    {
+        case ESC:
+            sec[1] = getch();
+            if (sec[1] == LEFT_SQUARE_BRACKET) // 27,91,...
+            {
+                sec[2] = getch();
+                switch (sec[2])
+                {
+                    case 65: /* ARRIBA */
+                        // printf("Arriba");
+                    break;
+                    case 66: /* ABAJO */
+                        // printf("Abajo");
+                    break;
+                    case 67: /* DERECHA */
+                        // printf("Derecha");
+                    break;
+                    case 68: /* IZQUIERDA */
+                        // printf("Izquierda");
+                    break;
+                    default:
+                    break;
+                }
+            }
+        break;
+        case 0x7B: /* BORRAR */
+            break;
+        default:
+            break;
+    }
+
+}
+
 int main(void) {
     char inputBuffer[MAX_LINE]; /* buffer to hold the command entered */
     int background;             /* equals 1 if a command is followed by '&' */
@@ -217,7 +270,9 @@ int main(void) {
 
     while (1)   /* Program terminates normally inside get_command() after ^D is typed*/
     {
-        printf("COMMAND->");
+        printf(VERDE"COMMAND->"$);
+        fflush(stdout);
+        // read_arrow_keys();
         fflush(stdout);
         get_command(inputBuffer, MAX_LINE, args, &background);  /* get next command */
 
@@ -250,6 +305,5 @@ int main(void) {
 // waitpid(pid, &status,        WNOHANG | WUNTRACED | WCONTINUED)
 // pidw == pid -> mirar status (signaled, stopped, continued)
 // borrar de la lista el proceso si signaled o stopped
-
 
 // introducir en la lista de jobs cuando hay un proceso en segundo plano o un proceso en primer plano suspendido
