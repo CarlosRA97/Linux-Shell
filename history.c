@@ -4,25 +4,67 @@
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
+#include <malloc.h>
+#include <string.h>
 #include "history.h"
-char getch()
+
+command_used * new_command(const char * command, char ** args, int background)
 {
-    int shell_terminal = STDIN_FILENO;
-    struct termios conf;
-    struct termios conf_new;
-    char c;
+	command_used * aux;
+	aux=(command_used *) malloc(sizeof(command_used));
+	aux->command=strdup(command);
+	if (args != NULL) {
+		aux->args = (char**) malloc(sizeof(char*));
+		int i = 1;
+		while (args[i] != NULL) {
+			aux->args[i-1] = (char*) malloc(sizeof(char));
+			strcpy(aux->args[i-1], args[i]);
+			i++;
+		}
+	} else {
+		aux->args = NULL;
+	}
+	aux->background = background;
+	aux->next=NULL;
+	return aux;
+}
 
-    tcgetattr(shell_terminal,&conf); /* leemos la configuracion actual */
-    conf_new = conf;
+void add_command_used (command_used * list, command_used * item)
+{
+	command_used * aux=list->next;
+	list->next=item;
+	item->next=aux;
+	list->length++;
+}
 
-    conf_new.c_lflag &= (~(ICANON|ECHO)); /* configuramos sin buffer ni eco */
-    conf_new.c_cc[VTIME] = 0;
-    conf_new.c_cc[VMIN] = 1;
+command_used * get_command_used_bypos (command_used * list, int n)
+{
+	command_used * aux=list;
+	if(n<1 || n>list->length) return NULL;
+	n--;
+	while(aux->next!= NULL && n) { aux=aux->next; n--;}
+	return aux->next;
+}
 
-    tcsetattr(shell_terminal,TCSANOW,&conf_new); /* establecer configuracion */
+void print_command(command_used * item)
+{
+	printf("%s ", item->command);
+	if (item->args != NULL) {
+		int i = 0;
+		printf("%s ", (item->args)[i] != NULL ? (item->args)[i] : "");
+	}
+	printf("%s\n", item->background ? "&" : "");
+}
 
-    c = getc(stdin); /* leemos el caracter */
-
-    tcsetattr(shell_terminal,TCSANOW,&conf); /* restauramos la configuracion */
-    return c;
-} 
+void print_command_list(command_used * list, void (*print)(command_used *))
+{
+	int n=1;
+	command_used * aux=list;
+	while(aux->next!= NULL)
+	{
+		printf(" %d ",n);
+		print(aux->next);
+		n++;
+		aux=aux->next;
+	}
+}

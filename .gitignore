@@ -1,1 +1,9 @@
-./cmake-build-debug
+.DS_Store
+.devcontainer
+.idea
+.vscode
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+Shell

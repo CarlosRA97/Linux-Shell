@@ -19,6 +19,7 @@ Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include "history.h"
 
 // ----------- ENUMERATIONS ---------------------------------------------
 enum status { SUSPENDED, SIGNALED, EXITED, CONTINUED};
@@ -40,6 +41,7 @@ typedef struct job_
 // -----------------------------------------------------------------------
 
 void get_command(char inputBuffer[], int size, char *args[],int *background);
+void get_command_propio(char inputBuffer[], int size, char *args[],int *background, command_used * historial);
 
 job * new_job(pid_t pid, const char * command, enum job_state state);
 
