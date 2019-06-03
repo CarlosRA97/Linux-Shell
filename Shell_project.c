@@ -26,6 +26,7 @@ To compile and run the program:
 #include "job_control.h"   // remember to compile with module job_control.c
 #include <string.h>
 #include "history.h"
+#include "pipe.h"
 
 #define MAX_LINE 256 /* 256 chars per line, per command, should be enough. */
 
@@ -216,8 +217,13 @@ void run_parent(pid_t pid_fork, char *args[], int background) {
 
 void run_child(char *args[]) {
     restore_terminal_signals();
-    execvp(args[0], args);
-    exit(-1);
+
+    if (args[1] != NULL && !strcmp(args[1], "|")) {
+        exec_pipe(args);
+    } else {
+        execvp(args[0], args);
+        exit(-1);
+    }   
 }
 
 int run_interal_commands(char *args[], int * background) {
@@ -281,7 +287,6 @@ int main(void) {
         }
 
         int pid_fork = fork();
-
         int isChild = pid_fork == 0;
         if (isChild) {
             run_child(args);

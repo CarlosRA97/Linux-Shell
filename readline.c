@@ -28,6 +28,7 @@
 #define moveLeft(times) printf("\033[%dD", (times))
 #define moveRight(times) printf("\033[%dC", (times))
 #define moveCursor(pos) printf("\033[%da", pos)
+#define erase() printf("\033[1K");
 
 char getch()
 {
@@ -167,6 +168,7 @@ int readline(char inputBuffer[], int size, command_used * historial)
                         case KEY_UP: /* ARRIBA */
                             if (cursorHistory < lengthHistorial) {
                                 cursorHistory++;
+
                                 if (!writen) {
                                     save_written_command(inputBuffer, writenCommand);
                                     writen = true;
@@ -190,6 +192,7 @@ int readline(char inputBuffer[], int size, command_used * historial)
                                     delete(size);
 
                                     restore_writen_command(inputBuffer, writenCommand);
+
                                     printf("%s", inputBuffer);
                                     cursorPos = strlen(inputBuffer);
                                     cursorHistory--;
@@ -256,8 +259,9 @@ int readline(char inputBuffer[], int size, command_used * historial)
                 if (cursorPos != length) {
                     delete(size);
                     writeRight(inputBuffer, size, cursorPos, inputBufferAux);
-                    restore();
                 }
+
+                restore();
                 
                 break;
         }
