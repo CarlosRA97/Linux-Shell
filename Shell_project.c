@@ -156,20 +156,17 @@ int historial(char ** args, int * background) {
     } else {
         command_used* com = get_command_used_bypos(historial_commands, atoi(args[1]));
         if (com != NULL) {
-            // printf("%s", strdup(com->command));
-            strcpy(args[0], strdup(com->command));
-            if (com->args != NULL) {
-                int i = 0;
-                while ((com->args)[i] != NULL) {
-                    // printf("%s ", strdup((com->args)[i]));
-                    strcpy(args[i+1], strdup((com->args)[i]));
-                    i++;
-                }
+            strcpy(args[0], com->command);
+            
+            if (com->args[0] == NULL) {
+                args[1] = NULL;
             } else {
-                strcpy(args[1], "");
+                for (int i = 0; (com->args)[i] != NULL; i++) {
+                    strcpy(args[i+1], strdup((com->args)[i]));
+                }
             }
+            
             *background = com->background;
-            // printf("%s", com->background ? "&" : "");
             has_runned = 0;
         } else {
             fprintf(stderr, "Tas pasao\n");
@@ -264,7 +261,6 @@ int main(void) {
     signal(SIGCHLD, handler_SIGCHLD);
 
     ignore_terminal_signals();
-
 
     while (1)   /* Program terminates normally inside get_command() after ^D is typed*/
     {
