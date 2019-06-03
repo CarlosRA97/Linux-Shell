@@ -273,7 +273,7 @@ int main(void) {
 
         if (args[0] == NULL) continue;   // if empty command
         
-        if (strcmp(args[0], "historial")) {
+        if (strcmp(args[0], "historial") && !(args[1] != NULL && !strcmp(args[1], "|"))) {
             add_command_used(historial_commands, new_command(args[0], args, background));
         }
 

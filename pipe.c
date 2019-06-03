@@ -20,8 +20,6 @@ void exec_pipe(char * args[]) {
 		/* el proceso hijo tiene una copia del pipe del padre,
 		en el fork, ejecuta el segundo programa y cambia su
 		entrada estandar por el pipe cerrando la salida del pipe */
-		int status, pid_wait;
-		pid_wait = waitpid(pid_fork, &status, WUNTRACED);
 		fno=fileno(stdin);
 		dup2(descf[0], fno);
 		close(descf[1]);
