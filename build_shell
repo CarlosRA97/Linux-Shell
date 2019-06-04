@@ -1,0 +1,6 @@
+#!/bin/bash
+cmake .
+make
+if [ ! -f "run_shell"  ]; then
+    ln -s ./bin/Shell run_shell
+fi

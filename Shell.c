@@ -184,8 +184,6 @@ int main(void) {
         fflush(stdout);
 
         get_command_propio(inputBuffer, MAX_LINE, args, &background, historial_commands);
-
-        int isPipe = 0;
         
         if (args[0] == NULL) continue;   // if empty command
         
