@@ -60,102 +60,69 @@ void handler_SIGCHLD() {
     // unblock_SIGCHLD();
 }
 
-void run_parent(pid_t pid_fork[], char *args[], int background) {
+void run_parent(pid_t pid_fork[], char *args[], int background, int isPipe) {
     int status;             /* status returned by wait */
     enum status status_res; /* status processed by analyze_status() */
     int info;                /* info processed by analyze_status() */
 
     new_process_group(pid_fork[0]);
 
-    if (args[1] != NULL && !strcpy(args[1], "|")) {
+    printf("isPipe (%d)\n", isPipe);
 
-        if (!background) {
 
-            /* FUNCIONAMIENTO PRINCIPAL */
-            set_terminal(pid_fork[0]);  // le da el terminal al hijo
+    if (!background) {
+
+        /* FUNCIONAMIENTO PRINCIPAL */
+        if (isPipe) {
+            set_terminal(pid_fork[0]);                      // le da el terminal al hijo
             for (int i = 0; i < maxChilds; i++) { 
                 waitpid(pid_fork[i], &status, WUNTRACED);   // espera por el hijo, pid_wait devuelve el pid del hijo
             }
-            set_terminal(getpid());                             // le da el terminal al padre
-            /* ------------------------ */
-
-            status_res = analyze_status(status, &info);
-
-            if (status_res == SUSPENDED) {
-                block_SIGCHLD();
-                add_job(global_jobs, new_job(pid_fork[0], args[0], STOPPED));
-                unblock_SIGCHLD();
-            } else if (info == 0xFF) {
-                fprintf(stderr, "Error, command not found: %s\n", args[0]);
-                fflush(stderr);
-            }
-
-            print_info(background, pid_fork[0], args[0], status_res, info);
-
+            set_terminal(getpid());                         // le da el terminal al padre
         } else {
-            printf("%s job running... pid: %i, command: %s\n", state_strings[background], pid_fork[0], args[0]);
-            block_SIGCHLD();
-            add_job(global_jobs, new_job(pid_fork[0], args[0], background));
-            unblock_SIGCHLD();
+            set_terminal(pid_fork[0]);                      // le da el terminal al hijo
+            waitpid(pid_fork[0], &status, WUNTRACED);       // espera por el hijo, pid_wait devuelve el pid del hijo
+            set_terminal(getpid()); 
         }
+        /* ------------------------ */
+
+        status_res = analyze_status(status, &info);
+
+        if (status_res == SUSPENDED) {
+            block_SIGCHLD();
+            add_job(global_jobs, new_job(pid_fork[0], args[0], STOPPED));
+            unblock_SIGCHLD();
+        } else if (info == 0xFF) {
+            fprintf(stderr, "Error, command not found: %s\n", args[0]);
+            fflush(stderr);
+        }
+
+        print_info(background, pid_fork[0], args[0], status_res, info);
 
     } else {
-
-        if (!background) {
-
-            /* FUNCIONAMIENTO PRINCIPAL */
-            set_terminal(pid_fork[0]);  // le da el terminal al hijo
-            // for (int i = 0; i < maxChilds; i++) { 
-                waitpid(pid_fork[0], &status, WUNTRACED);   // espera por el hijo, pid_wait devuelve el pid del hijo
-            // }
-            set_terminal(getpid());                             // le da el terminal al padre
-            /* ------------------------ */
-
-            status_res = analyze_status(status, &info);
-
-            if (status_res == SUSPENDED) {
-                block_SIGCHLD();
-                add_job(global_jobs, new_job(pid_fork[0], args[0], STOPPED));
-                unblock_SIGCHLD();
-            } else if (info == 0xFF) {
-                fprintf(stderr, "Error, command not found: %s\n", args[0]);
-                fflush(stderr);
-            }
-
-            print_info(background, pid_fork[0], args[0], status_res, info);
-
-        } else {
-            printf("%s job running... pid: %i, command: %s\n", state_strings[background], pid_fork[0], args[0]);
-            block_SIGCHLD();
-            add_job(global_jobs, new_job(pid_fork[0], args[0], background));
-            unblock_SIGCHLD();
-        }
-
-    }
+        printf("%s job running... pid: %i, command: %s\n", state_strings[background], pid_fork[0], args[0]);
+        block_SIGCHLD();
+        add_job(global_jobs, new_job(pid_fork[0], args[0], background));
+        unblock_SIGCHLD();
+    }    
 }
 
-void run_child(char *args[], int pid_fork[], int descf[], int * fno) {
+void run_child(char *args[], int pid_fork[], int descf[], int * fno, int pipe_pos) {
     restore_terminal_signals();
 
-    if (args[1] != NULL && !strcpy(args[1], "|")) {
+    if (pipe_pos) {
+
+        char * args1[MAX_LINE/2];
+        char * args2[MAX_LINE/2];
+        split_args(pipe_pos, args, args1, args2);
+
         if (pid_fork[0] == getpid())
         {
-            /* el proceso padre ejecuta el primer programa y cambia su
-            salida estandar al pipe cerrando la entrada del pipe */
-            *fno=fileno(stdout);
-            dup2(descf[1], *fno);
-            close(descf[0]);
-            execlp(args[0], args[0], NULL);
+            exec_pipe_child1(args1, descf, fno);
         }
         else if (pid_fork[1] == getpid())
         {
-            /* el proceso hijo tiene una copia del pipe del padre,
-            en el fork, ejecuta el segundo programa y cambia su
-            entrada estandar por el pipe cerrando la salida del pipe */
-            *fno=fileno(stdin);
-            dup2(descf[0], *fno);
-            close(descf[1]);
-            execlp(args[2], args[2], NULL);
+            exec_pipe_child1(args2, descf, fno);
         }
         // exec_pipe(args);
     } else {
@@ -187,7 +154,7 @@ int main(void) {
         
         if (args[0] == NULL) continue;   // if empty command
         
-        if (strcmp(args[0], "historial") && !(args[1] != NULL && !strcmp(args[1], "|"))) {
+        if (strcmp(args[0], "historial")) {
             add_command_used(historial_commands, new_command(args[0], args, background));
         }
 
@@ -196,36 +163,35 @@ int main(void) {
             continue;
         }
 
-
         int descf[2], fno;
-        if (args[1] != NULL && !strcpy(args[1], "|")) {
-            printf("HOLA SOY UNA PIPE");
+
+        int pipe_pos = find_pipe(args);
+
+        if (pipe_pos) {
+            printf("pipe\n");
+    
             pipe(descf);
 
-            for (int i = 0; i < maxChilds; i++) {
-                pid_fork[i] = fork();
-            }
+            pid_fork[0] = fork();
+            pid_fork[1] = fork();
 
-            for (int i = 0; i < maxChilds && pid_fork[i] == 0; i++) {
-                run_child(args, pid_fork, descf, &fno);
-            }
-            // int isChild1 = pid_fork[0] == 0;
-            // int isChild2 = pid_fork[1] == 0;
-            // if (isChild1) {
-            //     run_child(args, pid_fork, descf, &fno);
-            // } else if (isChild2) {
-            //     run_child(args, pid_fork, descf, &fno);
-            if (pid_fork[0] && pid_fork[1]) { // Parent
-                run_parent(pid_fork, args, background);
+            int isChild1 = pid_fork[0] == 0;
+            int isChild2 = pid_fork[1] == 0;
+            if (isChild1 && !isChild2) {
+                run_child(args, pid_fork, descf, &fno, pipe_pos);
+            } else if (!isChild1 && isChild2) {
+                run_child(args, pid_fork, descf, &fno, pipe_pos);
+            } else { // Parent
+                run_parent(pid_fork, args, background, pipe_pos);
             }
         } else {
-            
+            printf("no pipe\n");
             pid_fork[0] = fork();
             int isChild = pid_fork[0] == 0;
             if (isChild) {
-                run_child(args, pid_fork, descf, &fno);
+                run_child(args, pid_fork, descf, &fno, pipe_pos);
             } else { // Parent
-                run_parent(pid_fork, args, background);
+                run_parent(pid_fork, args, background, pipe_pos);
             }
         }
         
