@@ -1,6 +1,8 @@
 #ifndef _CURSOR_H
 #define _CURSOR_H
 
+#include <stdio.h>
+
 #define clear() printf("\033[H\033[J")
 #define gotoxy(x,y) printf("\033[%d;%dH", (x), (y))
 #define save() printf("\033[s")
