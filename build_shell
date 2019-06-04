@@ -1,6 +1,16 @@
 #!/bin/bash
-cmake .
-make
-if [ ! -f "run_shell"  ]; then
+if [ -x "$(command -v cmake)" ]; then
+    cmake . 
+else 
+    echo "Need to install CMake!" 
+fi
+
+if [ -x "$(command -v make)" ]; then
+    make 
+else
+    echo "Need to install make!" 
+fi
+
+if [ -f "./bin/Shell" -a ! -f "run_shell"  ]; then
     ln -s ./bin/Shell run_shell
 fi
