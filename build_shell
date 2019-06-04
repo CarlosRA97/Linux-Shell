@@ -15,4 +15,6 @@ if [ -x "$(command -v gcc)" ]; then
     if [ -f "./bin/Shell" -a ! -f "run_shell"  ]; then
         ln -s ./bin/Shell run_shell
     fi
+else
+    echo "Need to install GCC"
 fi
