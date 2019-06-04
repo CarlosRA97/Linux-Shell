@@ -6,30 +6,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <malloc.h>
-#include "../history/history.h"
+
+#include "readline.h"
 #include "cursor.h"
 
-#define ESC 27
-#define LEFT_SQUARE_BRACKET 91
-#define KEY_UP 65
-#define KEY_DOWN 66
-#define KEY_RIGHT 67
-#define KEY_LEFT 68
-#define DELETE 127
-#define ENTER 10
-#define TAB 9
-#define CtrlD 4
-#define CtrlL 12
-
-#define clear() printf("\033[H\033[J")
-#define gotoxy(x,y) printf("\033[%d;%dH", (x), (y))
-#define save() printf("\033[s")
-#define restore() printf("\033[u")
-#define delete(times) printf("\033[%dP", (times))
-#define moveLeft(times) printf("\033[%dD", (times))
-#define moveRight(times) printf("\033[%dC", (times))
-#define moveCursor(pos) printf("\033[%da", pos)
-#define erase() printf("\033[1K");
+#include "../history/history.h"
 
 char getch()
 {
@@ -103,11 +84,7 @@ void restore_writen_command(char inputBuffer[], char writenCommand[]) {
     strcpy(inputBuffer, writenCommand);
 }
 
-void reset_cursor(int cursorPos) {
-    
-    moveLeft(cursorPos - 1);
-    save();
-}
+
 
 void show_command(char inputBuffer[], int size, int *length, command_used * historial, int cursorHistory, int * cursorPos) {
     restore();

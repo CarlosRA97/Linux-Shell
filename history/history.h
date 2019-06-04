@@ -21,6 +21,4 @@ void execute_command(command_used * com);
 #define print_command_history_list(list)    print_command_list(list, print_command)
 #define new_historial_list() 	            new_command("historial", NULL, 0)
 
-char getch();
-
 #endif

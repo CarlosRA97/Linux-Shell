@@ -16,4 +16,12 @@ add_executable(
     readline/readline.c 
     readline/cursor.h
     readline/cursor.c 
+    internal_commands/internal_commands.h
+    internal_commands/bg.c
+    internal_commands/fg.c
+    internal_commands/cd.c
+    internal_commands/historial.c
+    internal_commands/common.c
+    common/common.h
+    common/common.c
 )

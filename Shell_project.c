@@ -14,38 +14,21 @@ To compile and run the program:
 
 **/
 
-#define ROJO "\x1b[31;1;1m"
-#define NEGRO "\x1b[0m"
-#define VERDE "\x1b[32;1;1m"
-#define AZUL "\x1b[34;1;1m"
-#define CIAN "\x1b[36;1;1m"
-#define MARRON "\x1b[33;1;1m"
-#define PURPURA "\x1b[35;1;1m"
-#define $ "\e[0m"
+
 
 #include <string.h>
 
+#include "common/common.h"
 #include "job/job_control.h"   // remember to compile with module job_control.c
 #include "history/history.h"
 #include "pipe/pipe.h"
-
-#define MAX_LINE 256 /* 256 chars per line, per command, should be enough. */
-#define maxChilds 2
+#include "internal_commands/internal_commands.h"
 
 // -----------------------------------------------------------------------
 //                            MAIN          
 // -----------------------------------------------------------------------
 job *global_jobs;
 command_used *historial_commands;
-
-void print_info(int state, pid_t pid, char *command, enum status status_res, int info) {
-    printf("%s pid: %i, command: %s, %s, info: %i\n",
-           state_strings[state],
-           pid,
-           command,
-           status_strings[status_res],
-           info);
-}
 
 void handler_SIGCHLD() {
     int status;
@@ -75,106 +58,6 @@ void handler_SIGCHLD() {
         }
     }
     // unblock_SIGCHLD();
-}
-
-int get_pos(char *arg) {
-    int pos = 0;
-    if (arg == NULL) {
-        if (empty_list(global_jobs)) {
-            fprintf(stderr, "No hay tareas\n");
-        } else {
-            pos = list_size(global_jobs);
-        }
-    } else if (atoi(arg) > list_size(global_jobs)) {
-        fprintf(stderr, "Tarea no encontrada\n");
-    } else {
-        pos = atoi(arg);
-    }
-    return pos;
-}
-
-void fg(char *arg) {
-    // block_SIGCHLD();
-    int pos = get_pos(arg);
-    if (pos) {
-
-        job *tarea_copy = get_item_bypos(global_jobs, pos);
-        job *tarea = new_job(tarea_copy->pgid, tarea_copy->command, tarea_copy->state);
-        delete_job(global_jobs, tarea_copy);
-
-        set_terminal(tarea->pgid);
-
-        if (tarea->state == STOPPED) {
-            killpg(tarea->pgid, SIGCONT);
-        }
-        tarea->state = FOREGROUND;
-
-        int status, info, status_res;
-
-        int pid_wait = waitpid(tarea->pgid, &status, WUNTRACED);
-        printf("pid_wait_sigchld: %i\n", pid_wait);
-        set_terminal(getpid());
-
-        status_res = analyze_status(status, &info);
-
-        if (status_res == SUSPENDED) {
-            tarea->state = STOPPED;
-            printf("Suspended pid: %i, command %s\n", tarea->pgid, tarea->command);
-            add_job(global_jobs, tarea);
-        } else {
-            print_info(tarea->state, tarea->pgid, tarea->command, status_res, info);
-        }
-
-    }
-    // unblock_SIGCHLD();
-}
-
-void bg(char *arg) {
-    block_SIGCHLD();
-    int pos = get_pos(arg);
-    if (pos) {
-
-        job *tarea = get_item_bypos(global_jobs, pos);
-
-        tarea->state = BACKGROUND;
-        killpg(tarea->pgid, SIGCONT);
-
-    }
-    unblock_SIGCHLD();
-}
-
-void cd(char *arg) {
-    int exitCode = chdir(arg);
-    if (arg != NULL && exitCode == -1) {
-        fprintf(stderr, "No se puede cambiar al directorio %s\n", arg);
-        fflush(stdout);
-    }
-}
-
-int historial(char ** args, int * background) {
-    int has_runned = 1;
-    if (args[1] == NULL) {
-        print_command_history_list(historial_commands);
-    } else {
-        command_used* com = get_command_used_bypos(historial_commands, atoi(args[1]));
-        if (com != NULL) {
-            strcpy(args[0], com->command);
-            
-            if (com->args[0] == NULL) {
-                args[1] = NULL;
-            } else {
-                for (int i = 0; (com->args)[i] != NULL; i++) {
-                    strcpy(args[i+1], strdup((com->args)[i]));
-                }
-            }
-            
-            *background = com->background;
-            has_runned = 0;
-        } else {
-            fprintf(stderr, "Tas pasao\n");
-        }
-    }
-    return has_runned;
 }
 
 void run_parent(pid_t pid_fork[], char *args[], int background) {
@@ -281,33 +164,6 @@ void run_child(char *args[], int pid_fork[], int descf[], int * fno) {
     }   
 }
 
-int run_interal_commands(char *args[], int * background) {
-    char * command = args[0];
-    int has_runned = 0;
-    if (!strcmp(command, "cd")) {
-        cd(args[1]);
-        has_runned = 1;
-    } else if (!strcmp(command, "exit")) {
-        exit(0);
-    } else if (!strcmp(command, "jobs")) {
-        block_SIGCHLD();
-        if (!empty_list(global_jobs)) {
-            print_job_list(global_jobs);
-        }
-        unblock_SIGCHLD();
-        has_runned = 1;
-    } else if (!strcmp(command, "fg")) {
-        fg(args[1]);
-        has_runned = 1;
-    } else if (!strcmp(command, "bg")) {
-        bg(args[1]);
-        has_runned = 1;
-    } else if (!strcmp(command, "historial")) {
-        has_runned = historial(args, background);
-    }
-    return has_runned;
-}
-
 int main(void) {
     char inputBuffer[MAX_LINE]; /* buffer to hold the command entered */
     int background;             /* equals 1 if a command is followed by '&' */
@@ -337,7 +193,7 @@ int main(void) {
             add_command_used(historial_commands, new_command(args[0], args, background));
         }
 
-        int has_runned_internal_command = run_interal_commands(args, &background);
+        int has_runned_internal_command = run_interal_commands(global_jobs, historial_commands, args, &background);
         if (has_runned_internal_command) {
             continue;
         }
