@@ -6,7 +6,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <malloc.h>
-#include "history.h"
+#include "../history/history.h"
+#include "cursor.h"
 
 #define ESC 27
 #define LEFT_SQUARE_BRACKET 91
@@ -66,11 +67,9 @@ int putCommandInto(char inputBuffer[], command_used * historial, int pos) {
         str_to_buf(inputBuffer, com->command, strlen(com->command), &cursor);
 
         if (com->args != NULL) {
-            int i = 0;
-            while ((com->args)[i] != NULL) {
+            for (int i = 0; (com->args)[i] != NULL; i++) {
                 str_to_buf(inputBuffer, " ", strlen(" "), &cursor);
                 str_to_buf(inputBuffer, (com->args)[i], strlen((com->args)[i]), &cursor);
-                i++;
             }
         }
         char * background = com->background ? " &" : "";
@@ -102,6 +101,12 @@ void save_written_command(char inputBuffer[], char writenCommand[]) {
 
 void restore_writen_command(char inputBuffer[], char writenCommand[]) {
     strcpy(inputBuffer, writenCommand);
+}
+
+void reset_cursor(int cursorPos) {
+    
+    moveLeft(cursorPos - 1);
+    save();
 }
 
 void show_command(char inputBuffer[], int size, int *length, command_used * historial, int cursorHistory, int * cursorPos) {
@@ -139,6 +144,7 @@ int readline(char inputBuffer[], int size, command_used * historial)
     bool EOL = false;
     int length = 0;
     int cursorPos = 0;
+    int cursorBackup = 0;
 
     char writenCommand[size];
     bool writen = false;
@@ -169,6 +175,8 @@ int readline(char inputBuffer[], int size, command_used * historial)
                             if (cursorHistory < lengthHistorial) {
                                 cursorHistory++;
 
+                                reset_cursor(cursorPos);
+
                                 if (!writen) {
                                     save_written_command(inputBuffer, writenCommand);
                                     writen = true;
@@ -180,12 +188,14 @@ int readline(char inputBuffer[], int size, command_used * historial)
                         case KEY_DOWN: /* ABAJO */
                             if (cursorHistory > 1) {
                                 cursorHistory--;
+
+                                reset_cursor(cursorPos);
                                 
                                 show_command(inputBuffer, size, &length, historial, cursorHistory, &cursorPos);
                             } 
                             else {
                                 if (writen) {
-                                    restore();
+                                    reset_cursor(cursorPos);
 
                                     clear_inputBuffer(inputBuffer, size);
                                     

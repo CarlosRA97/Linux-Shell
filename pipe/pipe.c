@@ -1,6 +1,5 @@
 #include <unistd.h>
 #include <stdio.h>
-#include "job_control.h"
 
 void exec_pipe(char * args[]) {
 	int descf[2], fno;
