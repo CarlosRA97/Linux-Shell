@@ -3,9 +3,11 @@ project(Shell C)
 
 set(CMAKE_C_STANDARD 99)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ./bin)
+
 add_executable(
     Shell 
-    Shell_project.c 
+    Shell.c 
     job/job_control.h 
     job/job_control.c 
     history/history.h 

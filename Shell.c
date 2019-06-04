@@ -6,15 +6,15 @@ Grados I. Informatica, Computadores & Software
 Dept. Arquitectura de Computadores - UMA
 
 Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
-
-To compile and run the program:
-   $ gcc Shell_project.c job_control.c -o Shell
-   $ ./Shell          
-	(then type ^D to exit program)
+            
+            *---*---------------------------------*---*
+            *---*   TO RUN READ FIRST README.md   *---*
+            *---*               OR                *---*
+            *---*        chmod +x run_shell       *---*
+            *---*           ./run_shell           *---*
+            *---*---------------------------------*---*
 
 **/
-
-
 
 #include <string.h>
 
@@ -201,6 +201,7 @@ int main(void) {
 
         int descf[2], fno;
         if (args[1] != NULL && !strcpy(args[1], "|")) {
+            printf("HOLA SOY UNA PIPE");
             pipe(descf);
 
             for (int i = 0; i < maxChilds; i++) {

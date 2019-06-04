@@ -1,5 +1,14 @@
 # Linux-Shell
 
+### Run Shell
+
+```bash
+chmod +x run_shell
+./run_shell
+```
+
+## Or
+
 ### Generate makefiles
 ```bash
 cmake .
