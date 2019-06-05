@@ -13,6 +13,6 @@ int main(int argc, char * argv[]) {
 
         return !strcmp(argv[find_pipe(args) + 1], "|");
     } else {
-        return 1;
+        return 0;
     }
 }

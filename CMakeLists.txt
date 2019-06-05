@@ -51,5 +51,5 @@ enable_testing()
 add_executable(tester test/tester.c)
 add_test(Tester bin/tester)
 
-add_executable(find_pipe_test test/pipe_test.c $<TARGET_OBJECTS:pipe>)
+add_executable(find_pipe_test test/find_pipe_test.c $<TARGET_OBJECTS:pipe>)
 add_test(FindPipe bin/find_pipe_test)
