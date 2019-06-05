@@ -84,8 +84,6 @@ void restore_writen_command(char inputBuffer[], char writenCommand[]) {
     strcpy(inputBuffer, writenCommand);
 }
 
-
-
 void show_command(char inputBuffer[], int size, int *length, command_used * historial, int cursorHistory, int * cursorPos) {
     restore();
                                 
@@ -145,7 +143,6 @@ int readline(char inputBuffer[], int size, command_used * historial)
                 sec[1] = getch();
                 if (sec[1] == LEFT_SQUARE_BRACKET) {
                     sec[2] = getch();
-                    
                     switch (sec[2])
                     {
                         case KEY_UP: /* ARRIBA */

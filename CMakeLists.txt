@@ -54,3 +54,9 @@ add_test(Tester bin/tester)
 add_executable(find_pipe_test test/find_pipe_test.c $<TARGET_OBJECTS:pipe>)
 add_test(FindPipeWithPipeInArgument bin/find_pipe_test "ls" "|" "sort")
 add_test(FindPipeWithoutPipeInArgument bin/find_pipe_test "ls" "-la")
+
+add_executable(find_pipes_test test/find_pipes_test.c $<TARGET_OBJECTS:pipe>)
+add_test(FindPipes bin/find_pipes_test "ls" "|" "sort" "|" "wc")
+
+add_executable(new_command_test test/new_command_test.c $<TARGET_OBJECTS:history>)
+add_test(NewCommandWithPipeAndArguments bin/new_command_test "ls" "-la" "|" "sort")

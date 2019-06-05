@@ -7,22 +7,20 @@
 #include <malloc.h>
 #include <string.h>
 #include "history.h"
+#include "../common/common.h"
 
 command_used * new_command(const char * command, char * args[], int background)
 {
-	command_used * aux = (command_used *) malloc(sizeof(command_used));
+	command_used * aux = (command_used *) calloc(1, sizeof(command_used));
 	aux->command = strdup(command);
 	if (args != NULL) {
-		aux->args = (char**) malloc(sizeof(char*));
-		for (int i = 1; args[i] != NULL; i++) {
-			aux->args[i-1] = (char*) malloc(sizeof(char));
-			strcpy(aux->args[i-1], args[i]);
+		aux->args = (char**) calloc(MAX_LINE/2, sizeof(char*));
+		for (int i = 0; args[i+1] != NULL; i++) {
+			aux->args[i] = (char*) calloc(1, sizeof(char));
+			strcpy(aux->args[i], args[i+1]);
 		}
-	} else {
-		aux->args = NULL;
 	}
 	aux->background = background;
-	aux->next=NULL;
 	return aux;
 }
 

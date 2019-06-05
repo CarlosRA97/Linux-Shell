@@ -1,7 +1,7 @@
 #include "internal_commands.h"
 
 void fg(job * global_jobs, char *arg) {
-    // block_SIGCHLD();
+    block_SIGCHLD();
     int pos = get_pos(global_jobs, arg);
     if (pos) {
 
@@ -33,5 +33,5 @@ void fg(job * global_jobs, char *arg) {
         }
 
     }
-    // unblock_SIGCHLD();
+    unblock_SIGCHLD();
 }

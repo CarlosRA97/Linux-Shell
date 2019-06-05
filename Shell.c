@@ -57,7 +57,7 @@ void handler_SIGCHLD() {
             }
         }
     }
-    // unblock_SIGCHLD();
+    
 }
 
 void run_parent(pid_t pid_fork[], char *args[], int background, int isPipe, int descf[]) {
@@ -69,23 +69,16 @@ void run_parent(pid_t pid_fork[], char *args[], int background, int isPipe, int 
 
     if (!background) {
         /* FUNCIONAMIENTO PRINCIPAL */
+        set_terminal(pid_fork[0]);                      // le da el terminal al hijo
         if (isPipe) {
-            close(descf[0]);
-            close(descf[1]);
-
-            set_terminal(pid_fork[0]);                      // le da el terminal al hijo
+            close_pipe(descf);
 
             waitpid(pid_fork[0], &status, WUNTRACED);       // espera por el hijo, pid_wait devuelve el pid del hijo
             waitpid(pid_fork[1], &status, WUNTRACED);
-            
-            set_terminal(getpid());                         // le da el terminal al padre
-        } else {
-        
-            set_terminal(pid_fork[0]);                      // le da el terminal al hijo
+        } else {    
             waitpid(pid_fork[0], &status, WUNTRACED);       // espera por el hijo, pid_wait devuelve el pid del hijo
-            set_terminal(getpid());
-
         }
+        set_terminal(getpid());                         // le da el terminal al padre
         /* ------------------------ */
 
         status_res = analyze_status(status, &info);
@@ -155,17 +148,20 @@ int main(void) {
 
         if (pipe_pos) {
 
-            char * args1[MAX_LINE/2];
-            char * args2[MAX_LINE/2];
-            split_args(pipe_pos, args, args1, args2);
+            char * argsChild[maxChilds][MAX_LINE/2];
+            
+            split_args(pipe_pos, args, argsChild[0], argsChild[1]);
     
             pipe(descf);
-
-            if ((pid_fork[0] = fork()) == 0) {
-                exec_write_pipe(args1, descf, &fno);
-            } 
-            if ((pid_fork[1] = fork()) == 0) {
-                exec_read_pipe(args2, descf, &fno);
+            
+            for (int i = 0; i < maxChilds; i++) {
+                if ((pid_fork[i] = fork()) == 0) {
+                    if (i % 2 == 0) {
+                        exec_write_pipe(argsChild[i], descf, &fno);
+                    } else {
+                        exec_read_pipe(argsChild[i], descf, &fno);
+                    }
+                } 
             }
             
             run_parent(pid_fork, args, background, pipe_pos, descf);

@@ -9,6 +9,35 @@ int find_pipe(char * args[]) {
 	return args[pipePosition] != NULL && pipePosition < MAX_LINE/2 ? pipePosition : 0;
 }
 
+void find_pipes(char * args[], int pipesPos[], int * pipeAtEnd) {
+	int i = 0;
+	for (int pipePosition = 0; args[pipePosition] != NULL && pipePosition < MAX_LINE/2; pipePosition++) {
+		if (
+			!strcmp(args[pipePosition], "|") && 
+			args[pipePosition+1] != NULL && strcmp(args[pipePosition+1], "|") &&
+			args[pipePosition-1] != NULL && strcmp(args[pipePosition-1], "|")
+		) {
+			pipesPos[i++] = pipePosition;
+		}
+		*pipeAtEnd =
+			!strcmp(args[pipePosition], "|") && 
+			args[pipePosition+1] == NULL;
+	}
+}
+
+void split_multiple_args(int pipePositions[], char * args[], char ** argsChild[]) {
+	if (pipePositions[0]) {
+		int argsCh = 0;
+		int argsPos = 0;
+		for (int i = 0; pipePositions[i] != 0; i++) {
+			for (int j = 0; j < pipePositions[i]; j++) {
+				argsChild[argsCh][argsPos++] = args[j];
+			}
+			argsCh++;
+		}
+	}
+}
+
 void split_args(int pipePosition, char * args[], char * args1[], char * args2[]) {
 	if (pipePosition) {
 		int args1pos = 0;
@@ -23,6 +52,11 @@ void split_args(int pipePosition, char * args[], char * args1[], char * args2[])
 		}
 		args2[args2pos] = NULL;
 	}
+}
+
+void close_pipe(int descf[]) {
+	close(descf[0]);
+    close(descf[1]);
 }
 
 void exec_write_pipe(char * args[], int descf[], int * fno) {
