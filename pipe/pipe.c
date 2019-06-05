@@ -15,13 +15,13 @@ void split_args(int pipePosition, char * args[], char * args1[], char * args2[])
 		for (int i = 0; i < pipePosition; i++) {
 			args1[args1pos++] = args[i];
 		}
-		args1[args1pos] = "\0";
+		args1[args1pos] = NULL;
 
 		int args2pos = 0;
 		for (int i = pipePosition + 1; i < MAX_LINE/2 && args[i] != NULL; i++) {
 			args2[args2pos++] = args[i];
 		}
-		// args2[args2pos] = "\0";
+		args2[args2pos] = NULL;
 	}
 }
 
@@ -32,7 +32,7 @@ void exec_write_pipe(char * args[], int descf[], int * fno) {
 	*fno=fileno(stdout);
 	dup2(descf[1], *fno);
 	close(descf[0]);
-	execlp(args[0], args[0], NULL);
+	execvp(args[0], args);
 }
 
 void exec_read_pipe(char * args[], int descf[], int * fno) {
@@ -43,7 +43,7 @@ void exec_read_pipe(char * args[], int descf[], int * fno) {
 	*fno=fileno(stdin);
 	dup2(descf[0], *fno);
 	close(descf[1]);
-	execlp(args[0], args[0], NULL);
+	execvp(args[0], args);
 }
 
 void exec_pipe(char * args[]) {

@@ -8,18 +8,15 @@
 #include <string.h>
 #include "history.h"
 
-command_used * new_command(const char * command, char ** args, int background)
+command_used * new_command(const char * command, char * args[], int background)
 {
-	command_used * aux;
-	aux=(command_used *) malloc(sizeof(command_used));
-	aux->command=strdup(command);
+	command_used * aux = (command_used *) malloc(sizeof(command_used));
+	aux->command = strdup(command);
 	if (args != NULL) {
 		aux->args = (char**) malloc(sizeof(char*));
-		int i = 1;
-		while (args[i] != NULL) {
+		for (int i = 1; args[i] != NULL; i++) {
 			aux->args[i-1] = (char*) malloc(sizeof(char));
 			strcpy(aux->args[i-1], args[i]);
-			i++;
 		}
 	} else {
 		aux->args = NULL;
@@ -42,7 +39,7 @@ command_used * get_command_used_bypos (command_used * list, int n)
 	command_used * aux=list;
 	if(n<1 || n>list->length) return NULL;
 	n--;
-	while(aux->next!= NULL && n) { aux=aux->next; n--;}
+	while(aux->next!= NULL && n) { aux=aux->next; n--; }
 	return aux->next;
 }
 
