@@ -10,8 +10,8 @@ Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
             *---*---------------------------------*---*
             *---*   TO RUN READ FIRST README.md   *---*
             *---*               OR                *---*
-            *---*        chmod +x run_shell       *---*
-            *---*           ./run_shell           *---*
+            *---*        chmod +x build_shell     *---*
+            *---*  ./build_shell && ./run_shell   *---*
             *---*---------------------------------*---*
 
 **/
