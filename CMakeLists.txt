@@ -5,25 +5,51 @@ set(CMAKE_C_STANDARD 99)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ./bin)
 
-add_executable(
-    Shell 
-    Shell.c 
-    job/job_control.h 
-    job/job_control.c 
-    history/history.h 
-    history/history.c 
+add_library( pipe OBJECT 
     pipe/pipe.h 
-    pipe/pipe.c 
+    pipe/pipe.c
+)
+add_library( job_control OBJECT 
+    job/job_control.h 
+    job/job_control.c
+)
+add_library( readline OBJECT 
     readline/readline.h 
     readline/readline.c 
     readline/cursor.h
-    readline/cursor.c 
+    readline/cursor.c
+)
+add_library( internal_commands OBJECT
     internal_commands/internal_commands.h
     internal_commands/bg.c
     internal_commands/fg.c
     internal_commands/cd.c
     internal_commands/historial.c
     internal_commands/common.c
+)
+add_library( history OBJECT
+    history/history.h 
+    history/history.c 
+)
+add_library( common OBJECT
     common/common.h
     common/common.c
 )
+
+add_executable(
+    Shell 
+    Shell.c 
+    $<TARGET_OBJECTS:job_control>
+    $<TARGET_OBJECTS:history>
+    $<TARGET_OBJECTS:pipe>
+    $<TARGET_OBJECTS:readline>
+    $<TARGET_OBJECTS:internal_commands>
+    $<TARGET_OBJECTS:common>
+)
+
+enable_testing()
+add_executable(tester test/tester.c)
+add_test(Tester bin/tester)
+
+add_executable(find_pipe_test test/pipe_test.c $<TARGET_OBJECTS:pipe>)
+add_test(FindPipe bin/find_pipe_test)

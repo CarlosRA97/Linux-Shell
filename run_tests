@@ -1,0 +1,2 @@
+#!/bin/bash
+./build_shell && make test
