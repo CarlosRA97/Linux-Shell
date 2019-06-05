@@ -10,8 +10,11 @@ int main(int argc, char * argv[]) {
         }
 
         printf("%d, is equal %d\n", find_pipe(args), !strcmp(argv[find_pipe(args) + 1], "|"));
-
-        return !strcmp(argv[find_pipe(args) + 1], "|");
+        if (find_pipe(args)) {
+            return strcmp(argv[find_pipe(args) + 1], "|");
+        } else {
+            return 0;
+        }
     } else {
         return 0;
     }

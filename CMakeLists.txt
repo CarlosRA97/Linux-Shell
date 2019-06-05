@@ -52,4 +52,5 @@ add_executable(tester test/tester.c)
 add_test(Tester bin/tester)
 
 add_executable(find_pipe_test test/find_pipe_test.c $<TARGET_OBJECTS:pipe>)
-add_test(FindPipe bin/find_pipe_test)
+add_test(FindPipeWithPipeInArgument bin/find_pipe_test "ls" "|" "sort")
+add_test(FindPipeWithoutPipeInArgument bin/find_pipe_test "ls" "-la")
