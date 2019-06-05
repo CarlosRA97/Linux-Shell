@@ -60,29 +60,31 @@ void handler_SIGCHLD() {
     // unblock_SIGCHLD();
 }
 
-void run_parent(pid_t pid_fork[], char *args[], int background, int isPipe) {
+void run_parent(pid_t pid_fork[], char *args[], int background, int isPipe, int descf[]) {
     int status;             /* status returned by wait */
     enum status status_res; /* status processed by analyze_status() */
     int info;                /* info processed by analyze_status() */
 
     new_process_group(pid_fork[0]);
 
-    printf("isPipe (%d)\n", isPipe);
-
-
     if (!background) {
-
         /* FUNCIONAMIENTO PRINCIPAL */
         if (isPipe) {
+            close(descf[0]);
+            close(descf[1]);
+
             set_terminal(pid_fork[0]);                      // le da el terminal al hijo
-            for (int i = 0; i < maxChilds; i++) { 
-                waitpid(pid_fork[i], &status, WUNTRACED);   // espera por el hijo, pid_wait devuelve el pid del hijo
-            }
+
+            waitpid(pid_fork[0], &status, WUNTRACED);       // espera por el hijo, pid_wait devuelve el pid del hijo
+            waitpid(pid_fork[1], &status, WUNTRACED);
+            
             set_terminal(getpid());                         // le da el terminal al padre
         } else {
+        
             set_terminal(pid_fork[0]);                      // le da el terminal al hijo
             waitpid(pid_fork[0], &status, WUNTRACED);       // espera por el hijo, pid_wait devuelve el pid del hijo
-            set_terminal(getpid()); 
+            set_terminal(getpid());
+
         }
         /* ------------------------ */
 
@@ -107,28 +109,12 @@ void run_parent(pid_t pid_fork[], char *args[], int background, int isPipe) {
     }    
 }
 
-void run_child(char *args[], int pid_fork[], int descf[], int * fno, int pipe_pos) {
+void run_child(char *args[]) {
     restore_terminal_signals();
 
-    if (pipe_pos) {
+    execvp(args[0], args);
 
-        char * args1[MAX_LINE/2];
-        char * args2[MAX_LINE/2];
-        split_args(pipe_pos, args, args1, args2);
-
-        if (pid_fork[0] == getpid())
-        {
-            exec_pipe_child1(args1, descf, fno);
-        }
-        else if (pid_fork[1] == getpid())
-        {
-            exec_pipe_child1(args2, descf, fno);
-        }
-        // exec_pipe(args);
-    } else {
-        execvp(args[0], args);
-        exit(-1);
-    }   
+    exit(-1);
 }
 
 int main(void) {
@@ -168,31 +154,32 @@ int main(void) {
         int pipe_pos = find_pipe(args);
 
         if (pipe_pos) {
-            printf("pipe\n");
+
+            char * args1[MAX_LINE/2];
+            char * args2[MAX_LINE/2];
+            split_args(pipe_pos, args, args1, args2);
     
             pipe(descf);
 
-            pid_fork[0] = fork();
-            pid_fork[1] = fork();
-
-            int isChild1 = pid_fork[0] == 0;
-            int isChild2 = pid_fork[1] == 0;
-            if (isChild1 && !isChild2) {
-                run_child(args, pid_fork, descf, &fno, pipe_pos);
-            } else if (!isChild1 && isChild2) {
-                run_child(args, pid_fork, descf, &fno, pipe_pos);
-            } else { // Parent
-                run_parent(pid_fork, args, background, pipe_pos);
+            if ((pid_fork[0] = fork()) == 0) {
+                exec_write_pipe(args1, descf, &fno);
+            } 
+            if ((pid_fork[1] = fork()) == 0) {
+                exec_read_pipe(args2, descf, &fno);
             }
+            
+            run_parent(pid_fork, args, background, pipe_pos, descf);
+            
         } else {
-            printf("no pipe\n");
+
             pid_fork[0] = fork();
             int isChild = pid_fork[0] == 0;
             if (isChild) {
-                run_child(args, pid_fork, descf, &fno, pipe_pos);
-            } else { // Parent
-                run_parent(pid_fork, args, background, pipe_pos);
+                run_child(args);
+            } else {
+                run_parent(pid_fork, args, background, pipe_pos, descf);
             }
+
         }
         
     } // end while
