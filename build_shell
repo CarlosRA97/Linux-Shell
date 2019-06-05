@@ -2,14 +2,10 @@
 if [ -x "$(command -v gcc)" ]; then
     if [ -x "$(command -v cmake)" ]; then
         cmake . 
-    else 
-        echo "Need to install CMake!" 
-    fi
 
-    if [ -x "$(command -v make)" ]; then
-        make 
-    else
-        echo "Need to install make!" 
+        cmake --build . --target Shell --config Debug
+    else 
+        echo "Need to install CMake or make!" 
     fi
 
     if [ -f "./bin/Shell" -a ! -f "run_shell"  ]; then
