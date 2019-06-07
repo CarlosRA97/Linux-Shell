@@ -39,6 +39,9 @@ int run_interal_commands(job * global_jobs, command_used * historial_commands, c
         has_runned = 1;
     } else if (!strcmp(command, "historial")) {
         has_runned = historial(historial_commands, args, background);
+    } else if (!strcmp(command, "sig")) {
+        sig();
+        has_runned = 1;
     }
     return has_runned;
 }

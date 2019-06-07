@@ -2,6 +2,7 @@
 
 void fg(job * global_jobs, char *arg) {
     block_SIGCHLD();
+    int isSignaled = 0;
     int pos = get_pos(global_jobs, arg);
     if (pos) {
 
@@ -28,6 +29,8 @@ void fg(job * global_jobs, char *arg) {
             tarea->state = STOPPED;
             printf("Suspended pid: %i, command %s\n", tarea->pgid, tarea->command);
             add_job(global_jobs, tarea);
+        } else if (status_res == SIGNALED) {
+            signaled++;
         } else {
             print_info(tarea->state, tarea->pgid, tarea->command, status_res, info);
         }

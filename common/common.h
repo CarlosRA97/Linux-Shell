@@ -17,4 +17,8 @@
 
 void print_info(int state, pid_t pid, char *command, enum status status_res, int info);
 
+job *global_jobs;
+command_used *historial_commands;
+int signaled;
+
 #endif

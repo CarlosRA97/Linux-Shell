@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.7.2)
 project(Shell C)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ./bin)
 
@@ -24,6 +24,7 @@ add_library( internal_commands OBJECT
     internal_commands/bg.c
     internal_commands/fg.c
     internal_commands/cd.c
+    internal_commands/sig.c
     internal_commands/historial.c
     internal_commands/common.c
 )

@@ -27,8 +27,6 @@ Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
 // -----------------------------------------------------------------------
 //                            MAIN          
 // -----------------------------------------------------------------------
-job *global_jobs;
-command_used *historial_commands;
 
 void handler_SIGCHLD() {
     int status;
@@ -43,6 +41,9 @@ void handler_SIGCHLD() {
         if (pid_wait > 0) {
 
             int status_res = analyze_status(status, &info);
+            if (status_res == SIGNALED) {
+                signaled++;
+            }
 
             if (status_res == EXITED || (status_res == SIGNALED && (info == SIGKILL || info == SIGTERM))) {
                 print_info(tarea->state, tarea->pgid, tarea->command, status_res, info);
@@ -60,21 +61,21 @@ void handler_SIGCHLD() {
     
 }
 
-void run_parent(pid_t pid_fork[], char *args[], int background, int isPipe, int descf[]) {
+void run_parent(pid_t pid_fork[], char *args[], int isBackground, int isPipe, int descf[]) {
     int status;             /* status returned by wait */
     enum status status_res; /* status processed by analyze_status() */
     int info;                /* info processed by analyze_status() */
 
     new_process_group(pid_fork[0]);
 
-    if (!background) {
+    if (!isBackground) {
         /* FUNCIONAMIENTO PRINCIPAL */
         set_terminal(pid_fork[0]);                      // le da el terminal al hijo
         if (isPipe) {
             close_pipe(descf);
-
-            waitpid(pid_fork[0], &status, WUNTRACED);       // espera por el hijo, pid_wait devuelve el pid del hijo
-            waitpid(pid_fork[1], &status, WUNTRACED);
+            for (int i = 0; i < maxChilds; i++) {
+                waitpid(pid_fork[i], &status, WUNTRACED);       // espera por el hijo, pid_wait devuelve el pid del hijo
+            }
         } else {    
             waitpid(pid_fork[0], &status, WUNTRACED);       // espera por el hijo, pid_wait devuelve el pid del hijo
         }
@@ -90,14 +91,16 @@ void run_parent(pid_t pid_fork[], char *args[], int background, int isPipe, int 
         } else if (info == 0xFF) {
             fprintf(stderr, "Error, command not found: %s\n", args[0]);
             fflush(stderr);
-        }
-
-        print_info(background, pid_fork[0], args[0], status_res, info);
+        } else if (status_res == SIGNALED) {
+            signaled++;
+        } 
+        
+        print_info(isBackground, pid_fork[0], args[0], status_res, info);
 
     } else {
-        printf("%s job running... pid: %i, command: %s\n", state_strings[background], pid_fork[0], args[0]);
+        printf("%s job running... pid: %i, command: %s\n", state_strings[isBackground], pid_fork[0], args[0]);
         block_SIGCHLD();
-        add_job(global_jobs, new_job(pid_fork[0], args[0], background));
+        add_job(global_jobs, new_job(pid_fork[0], args[0], isBackground));
         unblock_SIGCHLD();
     }    
 }
@@ -112,7 +115,7 @@ void run_child(char *args[]) {
 
 int main(void) {
     char inputBuffer[MAX_LINE]; /* buffer to hold the command entered */
-    int background;             /* equals 1 if a command is followed by '&' */
+    int isBackground;             /* equals 1 if a command is followed by '&' */
     char *args[MAX_LINE / 2];     /* command line (of 256) has max of 128 arguments */
     pid_t pid_fork[maxChilds];
 
@@ -129,15 +132,15 @@ int main(void) {
         printf(VERDE"COMMAND->"$);
         fflush(stdout);
 
-        get_command_propio(inputBuffer, MAX_LINE, args, &background, historial_commands);
+        get_command_propio(inputBuffer, MAX_LINE, args, &isBackground, historial_commands);
         
         if (args[0] == NULL) continue;   // if empty command
         
         if (strcmp(args[0], "historial")) {
-            add_command_used(historial_commands, new_command(args[0], args, background));
+            add_command_used(historial_commands, new_command(args[0], args, isBackground));
         }
 
-        int has_runned_internal_command = run_interal_commands(global_jobs, historial_commands, args, &background);
+        int has_runned_internal_command = run_interal_commands(global_jobs, historial_commands, args, &isBackground);
         if (has_runned_internal_command) {
             continue;
         }
@@ -164,19 +167,17 @@ int main(void) {
                 } 
             }
             
-            run_parent(pid_fork, args, background, pipe_pos, descf);
-            
         } else {
 
             pid_fork[0] = fork();
             int isChild = pid_fork[0] == 0;
             if (isChild) {
                 run_child(args);
-            } else {
-                run_parent(pid_fork, args, background, pipe_pos, descf);
             }
-
+                
         }
+
+        run_parent(pid_fork, args, isBackground, pipe_pos, descf);
         
     } // end while
 }
