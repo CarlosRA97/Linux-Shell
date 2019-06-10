@@ -5,7 +5,9 @@
 #include <termios.h>
 #include <string.h>
 #include <stdlib.h>
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
 
 #include "readline.h"
 #include "cursor.h"

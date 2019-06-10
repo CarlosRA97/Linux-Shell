@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
 #include <string.h>
 #include "history.h"
 #include "../common/common.h"
