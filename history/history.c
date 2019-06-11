@@ -39,18 +39,34 @@ command_used * get_command_used_bypos (command_used * list, int n)
 	command_used * aux=list;
 	if(n<1 || n>list->length) return NULL;
 	n--;
-	while(aux->next!= NULL && n) { aux=aux->next; n--; }
+	while(aux->next != NULL && n) { aux=aux->next; n--; }
 	return aux->next;
 }
 
 void print_command(command_used * item)
 {
 	printf("%s ", item->command);
-	if (item->args != NULL) {
-		int i = 0;
-		printf("%s ", (item->args)[i] != NULL ? (item->args)[i] : "");
+	if (item->args[0] != NULL) {
+		for (int i = 0; item->args[i] != NULL; i++) {
+			printf("%s ", item->args[i]);
+		}
 	}
 	printf("%s\n", item->background ? "&" : "");
+}
+
+void insert_command_to_args(command_used * item, char ** args, int * background)
+{
+
+    strcpy(args[0], item->command);
+
+    int i = 1;
+    for (; item->args[i - 1] != NULL ; i++) {
+        args[i] = item->args[i - 1];
+    }
+    args[i] = NULL;
+
+    *background = item->background;
+
 }
 
 void print_command_list(command_used * list, void (*print)(command_used *))

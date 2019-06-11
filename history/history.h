@@ -16,7 +16,7 @@ command_used * get_command_used_bypos( command_used * list, int n);
 void add_command_used(command_used *list, command_used *item);
 void print_command(command_used *item);
 void print_command_list(command_used *list, void (*print)(command_used *));
-void execute_command(command_used * com);
+void insert_command_to_args(command_used * item, char ** args, int * background);
 
 #define print_command_history_list(list)    print_command_list(list, print_command)
 #define new_historial_list() 	            new_command("historial", NULL, 0)
