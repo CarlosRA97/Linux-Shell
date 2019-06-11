@@ -121,7 +121,6 @@ int readline(char inputBuffer[], int size, command_used * historial)
     bool EOL = false;
     int length = 0;
     int cursorPos = 0;
-    int cursorBackup = 0;
 
     char writenCommand[size];
     bool writen = false;
@@ -208,7 +207,7 @@ int readline(char inputBuffer[], int size, command_used * historial)
                 length++;
                 clear();
                 break;
-            case CtrlD: 
+            case CtrlD:
                 EOL = true;
                 length = 0;
                 break;
