@@ -4,3 +4,7 @@
 void sig() {
     printf("Signaleds %d\n", signaled);
 }
+
+void sig_inc() {
+    signaled++;
+}

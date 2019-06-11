@@ -28,6 +28,8 @@ Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
 //                            MAIN          
 // -----------------------------------------------------------------------
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
 void handler_SIGCHLD() {
     int status;
     int info;
@@ -42,7 +44,7 @@ void handler_SIGCHLD() {
 
             int status_res = analyze_status(status, &info);
             if (status_res == SIGNALED) {
-                signaled++;
+                sig_inc();
             }
 
             if (status_res == EXITED || (status_res == SIGNALED && (info == SIGKILL || info == SIGTERM))) {
@@ -92,7 +94,7 @@ void run_parent(pid_t pid_fork[], char *args[], int isBackground, int isPipe, in
             fprintf(stderr, "Error, command not found: %s\n", args[0]);
             fflush(stderr);
         } else if (status_res == SIGNALED) {
-            signaled++;
+            sig_inc();
         } 
         
         print_info(isBackground, pid_fork[0], args[0], status_res, info);
@@ -115,7 +117,7 @@ void run_child(char *args[]) {
 
 int main(void) {
     char inputBuffer[MAX_LINE]; /* buffer to hold the command entered */
-    int isBackground;             /* equals 1 if a command is followed by '&' */
+    int isBackground;             /* equals 1 if test_inserting_into_args command is followed by '&' */
     char *args[MAX_LINE / 2];     /* command line (of 256) has max of 128 arguments */
     pid_t pid_fork[maxChilds];
 
