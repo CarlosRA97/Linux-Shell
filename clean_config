@@ -1,0 +1,2 @@
+#!/bin/bash
+rm -R cmake_install.cmake CMakeCache.txt CTestTestfile.cmake Makefile run_shell bin CMakeFiles
