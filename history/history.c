@@ -1,6 +1,6 @@
 
 /*============================================================*/
-/* lee un caracter sin esperar a '\n' y sin eco */
+/* lee un caracter sin esperar test_inserting_into_args '\n' y sin eco */
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
