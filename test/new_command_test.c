@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "common_test.h"
 
 
 
@@ -19,14 +20,11 @@ void test_inserting_into_args(command_used *com, char **args, int *background) {
     *background = com->background;
 }
 
-
 int main(int argc, char * argv[]) {
     if (argc > 1) {
         char * command = argv[1];
         char * args[argc];
-        for (int i = 0; i < argc; i++) {
-            args[i] = argv[i+1];
-        }
+        parser(argc, argv, args);
 
         printf("Checking if new_command works properly\n");
         command_used * com = new_command(command, args, 0);
@@ -37,7 +35,6 @@ int main(int argc, char * argv[]) {
         }
 
         print_command(com);
-
 
         printf("Checking if insert_command_to_args works properly\n");
         int background;

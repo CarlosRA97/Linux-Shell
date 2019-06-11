@@ -27,6 +27,7 @@ add_library( internal_commands OBJECT
     internal_commands/sig.c
     internal_commands/historial.c
     internal_commands/common.c
+    internal_commands/team.c
 )
 add_library( history OBJECT
     history/history.h 
@@ -59,5 +60,14 @@ add_test(FindPipeWithoutPipeInArgument bin/find_pipe_test "ls" "-la")
 add_executable(find_pipes_test test/find_pipes_test.c $<TARGET_OBJECTS:pipe>)
 add_test(FindPipes bin/find_pipes_test "ls" "|" "sort" "|" "wc")
 
-add_executable(new_command_test test/new_command_test.c $<TARGET_OBJECTS:history>)
+add_executable(new_command_test test/new_command_test.c $<TARGET_OBJECTS:history> test/common_test.h)
 add_test(NewCommandWithPipeAndArguments bin/new_command_test "ls" "-la" "|" "sort")
+
+add_executable(team_test test/team_test.c
+        $<TARGET_OBJECTS:internal_commands>
+        $<TARGET_OBJECTS:history>
+        $<TARGET_OBJECTS:job_control>
+        $<TARGET_OBJECTS:common>
+        $<TARGET_OBJECTS:readline>
+        test/common_test.h)
+add_test(TeamTest bin/team_test)

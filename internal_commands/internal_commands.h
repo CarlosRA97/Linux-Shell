@@ -15,5 +15,6 @@ void sig_inc();
 void cd(char * arg);
 int historial(command_used * historial_commands, char ** args, int * background);
 int run_interal_commands(job * global_jobs, command_used * historial_commands, char *args[], int * background);
+int team(char ** args);
 
 #endif

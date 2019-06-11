@@ -61,19 +61,21 @@ void handler_SIGCHLD() {
     
 }
 
-void run_parent(pid_t pid_fork[], char *args[], int isBackground, int isPipe, int descf[]) {
+void run_parent(pid_t pid_fork[], char *args[], int isBackground, int isMultipleForks, int numOfForks, int descf[]) {
     int status;             /* status returned by wait */
     enum status status_res; /* status processed by analyze_status() */
     int info;               /* info processed by analyze_status() */
 
-    new_process_group(pid_fork[0]);
+    for (int i = 0; i < numOfForks; i++) {
+        new_process_group(pid_fork[i]);
+    }
 
     if (!isBackground) {
         /* FUNCIONAMIENTO PRINCIPAL */
         set_terminal(pid_fork[0]);                      // le da el terminal al hijo
-        if (isPipe) {
+        if (isMultipleForks) {
             close_pipe(descf);
-            for (int i = 0; i < maxChilds; i++) {
+            for (int i = 0; i < numOfForks; i++) {
                 waitpid(pid_fork[i], &status, WUNTRACED);       // espera por el hijo, pid_wait devuelve el pid del hijo
             }
         } else {    
@@ -115,9 +117,8 @@ void run_child(char *args[]) {
 
 int main(void) {
     char inputBuffer[MAX_LINE]; /* buffer to hold the command entered */
-    int isBackground;             /* equals 1 if test_inserting_into_args command is followed by '&' */
+    int isBackground;             /* equals 1 if a command is followed by '&' */
     char *args[MAX_LINE / 2];     /* command line (of 256) has max of 128 arguments */
-    pid_t pid_fork[maxChilds];
 
     global_jobs = new_list("jobs");
     historial_commands = new_historial_list();
@@ -156,9 +157,12 @@ int main(void) {
             split_args(pipe_pos, args, argsChild[0], argsChild[1]);
     
             pipe(descf);
+
+            pid_t pid_fork[maxChilds];
             
             for (int i = 0; i < maxChilds; i++) {
-                if ((pid_fork[i] = fork()) == 0) {
+                int isChild = (pid_fork[i] = fork()) == 0;
+                if (isChild) {
                     if (i % 2 == 0) {
                         exec_write_pipe(argsChild[i], descf, &fno);
                     } else {
@@ -166,18 +170,25 @@ int main(void) {
                     }
                 } 
             }
+
+            run_parent(pid_fork, args, isBackground, pipe_pos, maxChilds, descf);
             
         } else {
+            int numOfForks = team(args);
+            pid_t pid_fork[numOfForks];
 
-            pid_fork[0] = fork();
-            int isChild = pid_fork[0] == 0;
-            if (isChild) {
-                run_child(args);
+            for (int i = 0; i < numOfForks; i++) {
+                int isChild = (pid_fork[i] = fork()) == 0;
+                if (isChild) {
+                    run_child(args);
+                }
             }
-                
+
+            run_parent(pid_fork, args, isBackground, numOfForks > 1 ? 1 : 0, numOfForks, descf);
+
         }
 
-        run_parent(pid_fork, args, isBackground, pipe_pos, descf);
+
         
     } // end while
 }
