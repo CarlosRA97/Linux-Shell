@@ -28,8 +28,6 @@ Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
 //                            MAIN          
 // -----------------------------------------------------------------------
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
 void handler_SIGCHLD() {
     int status;
     int info;
@@ -66,7 +64,7 @@ void handler_SIGCHLD() {
 void run_parent(pid_t pid_fork[], char *args[], int isBackground, int isPipe, int descf[]) {
     int status;             /* status returned by wait */
     enum status status_res; /* status processed by analyze_status() */
-    int info;                /* info processed by analyze_status() */
+    int info;               /* info processed by analyze_status() */
 
     new_process_group(pid_fork[0]);
 
